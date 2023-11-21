@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import hash from "./hash";
 
 export default function createGlobalStore<T extends { [key: string]: any; }>({ initial, persist }: { initial: T; persist?: boolean; }) {
     const mutable = {
         data: Object.assign({}, initial) as T,
         loaded: false
     };
-    const id = JSON.stringify(initial);
+    const id = 'PS-' + hash(initial);
 
     function store() {
         if (persist) window.localStorage.setItem(id, JSON.stringify(mutable.data));
