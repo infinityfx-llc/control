@@ -34,7 +34,7 @@ export default function createGlobalStore<T extends { [key: string]: any; }>({ i
         function synchronize({ detail }: { detail: string; }) {
             if (detail !== id) return;
 
-            setData(Object.assign({}, mutable.data)); // deep clone?
+            setData(structuredClone(mutable.data));
         }
 
         useEffect(() => {
