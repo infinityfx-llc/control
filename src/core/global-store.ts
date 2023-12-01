@@ -34,14 +34,15 @@ export default function createGlobalStore<T extends { [key: string]: any; }>({ i
         function synchronize({ detail }: { detail: string; }) {
             if (detail !== id) return;
 
-            setData(structuredClone(mutable.data));
+            setData(JSON.parse(JSON.stringify(mutable.data)));
         }
 
         useEffect(() => {
             if (!mutable.loaded && persist) load();
 
-            setLoaded(true);
             synchronize({ detail: id });
+            setLoaded(true);
+            
             window.addEventListener('synchronize', synchronize as any);
             window.addEventListener('beforeunload', store);
 
