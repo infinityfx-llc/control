@@ -4,7 +4,9 @@ type Touched<T> = { [key in keyof T]?: boolean; };
 
 type Errors<T> = { [key in keyof T]?: string | boolean; };
 
-export type Form<T> = {
+type Shell<T> = { [K in keyof T]: T[K] extends { [key: string]: any; } ? Shell<T[K]> : any; };
+
+export type Form<T, V extends Shell<T> = T> = {
     submitting: boolean;
     values: T;
     errors: Errors<T>;
@@ -14,21 +16,21 @@ export type Form<T> = {
     fieldProps: <K extends keyof T>(field: K) => {
         value: T[K];
         checked: boolean | undefined;
-        onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+        onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
         onBlur: () => void;
         error: Errors<T>[K] | undefined;
     };
-    submit: (callback?: (values: T) => Promise<void> | void) => void;
+    submit: (callback?: (values: V) => Promise<void> | void) => void;
     validate: () => void;
     reset: () => void;
 }
 
-export default function useForm<T extends { [key: string]: any; }>({ initial, onValidate, onSubmit, validateOnChange = true }: {
+export default function useForm<T extends { [key: string]: any; }, V extends Shell<T> = T>({ initial, onValidate, onSubmit, validateOnChange = true }: {
     initial: T;
-    onValidate?: (values: T) => { [key in keyof T]?: string | boolean; };
-    onSubmit?: (values: T) => Promise<void> | void;
+    onValidate?: (values: T) => Errors<T> | undefined;
+    onSubmit?: (values: V) => Promise<void> | void;
     validateOnChange?: boolean;
-}): Form<T> {
+}): Form<T, V> {
     const [submitting, setSubmitting] = useState(false);
     const valuesRef = useRef<T>(initial);
     const [values, setStateValues] = useState<T>(initial);
@@ -36,7 +38,12 @@ export default function useForm<T extends { [key: string]: any; }>({ initial, on
     const [touched, setTouched] = useState<Touched<T>>({});
 
     function validate() {
-        if (onValidate) setErrors(onValidate(valuesRef.current));
+        if (!onValidate) return;
+
+        const errors = onValidate(valuesRef.current);
+        if (errors && Object.keys(errors).length) return setErrors(errors);
+
+        return valuesRef.current as any as V;
     }
 
     function reset() {
@@ -58,9 +65,9 @@ export default function useForm<T extends { [key: string]: any; }>({ initial, on
         return {
             value,
             checked: typeof value === 'boolean' ? value : undefined,
-            onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+            onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
                 setValues({
-                    [field]: e.target.type === 'radio' || e.target.type === 'checkbox' ?
+                    [field]: (e.target.type === 'radio' || e.target.type === 'checkbox') && 'checked' in e.target ?
                         e.target.checked :
                         e.target.value
                 } as Partial<T>);
@@ -73,7 +80,7 @@ export default function useForm<T extends { [key: string]: any; }>({ initial, on
         };
     }
 
-    async function submit(callback?: (values: T) => Promise<void> | void) {
+    async function submit(callback?: (values: V) => Promise<void> | void) {
         if (submitting) return;
         setSubmitting(true);
 
@@ -81,11 +88,10 @@ export default function useForm<T extends { [key: string]: any; }>({ initial, on
         for (const key in values) touched[key] = true;
         setTouched(touched);
 
-        let validated = {};
-        if (onValidate) setErrors(validated = onValidate(valuesRef.current));
+        const cb = onSubmit || callback,
+            validated = validate();
 
-        const cb = onSubmit || callback;
-        if (!Object.keys(validated).length && cb) await cb(valuesRef.current);
+        if (validated && cb) await cb(validated);
 
         setSubmitting(false);
     }
