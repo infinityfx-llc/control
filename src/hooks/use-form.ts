@@ -27,7 +27,7 @@ export type Form<T, V extends Shell<T> = T> = {
 
 export default function useForm<T extends { [key: string]: any; }, V extends Shell<T> = T>({ initial, onValidate, onSubmit, validateOnChange = true }: {
     initial: T;
-    onValidate?: (values: T) => Errors<T> | undefined;
+    onValidate?: (values: T) => Errors<T> | void | undefined;
     onSubmit?: (values: V) => Promise<void> | void;
     validateOnChange?: boolean;
 }): Form<T, V> {
@@ -38,7 +38,7 @@ export default function useForm<T extends { [key: string]: any; }, V extends She
     const [touched, setTouched] = useState<Touched<T>>({});
 
     function validate() {
-        if (!onValidate) return;
+        if (!onValidate) return valuesRef.current as any as V;
 
         const errors = onValidate(valuesRef.current);
         if (errors && Object.keys(errors).length) return setErrors(errors);
