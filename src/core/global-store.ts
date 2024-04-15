@@ -21,7 +21,7 @@ export default function createGlobalStore<T extends { [key: string]: any; }>({ i
         }
     }
 
-    function mutate(callback: (data: T) => Promise<void> | void) {
+    function mutate(callback: (data: T) => Promise<any> | any) {
         callback(mutable.data);
 
         window.dispatchEvent(new CustomEvent('synchronize', { detail: id }));
