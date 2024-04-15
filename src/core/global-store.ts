@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import hash from "./hash";
+import parseJson from "./parse-json";
 
 export default function createGlobalStore<T extends { [key: string]: any; }>({ initial, persist }: { initial: T; persist?: boolean; }) {
     const mutable = {
@@ -16,7 +17,7 @@ export default function createGlobalStore<T extends { [key: string]: any; }>({ i
         const serialized = window.localStorage.getItem(id);
 
         if (serialized) {
-            mutable.data = JSON.parse(serialized);
+            mutable.data = parseJson(serialized);
             mutable.loaded = true;
         }
     }
@@ -34,7 +35,7 @@ export default function createGlobalStore<T extends { [key: string]: any; }>({ i
         function synchronize({ detail }: { detail: string; }) {
             if (detail !== id) return;
 
-            setData(JSON.parse(JSON.stringify(mutable.data)));
+            setData(parseJson(JSON.stringify(mutable.data)));
         }
 
         useEffect(() => {
